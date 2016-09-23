@@ -3,6 +3,7 @@
   (:require [reagent.core :as reagent]
             [pick-a-pair.util :as util]
             [re-frame.core :refer [reg-event-db
+                                   reg-event-fx
                                    path
                                    reg-sub
                                    dispatch
@@ -43,13 +44,21 @@
    (assoc db :input-value value)))
 
 (reg-event-db
+ :clear-input
+ (fn [db _]
+   (assoc db :input-value "")))
+
+(reg-event-fx
  :add-participant
- (fn [db [_ value]]
-   (let [participants (db :participants)]
-     (if (= value "")
-       db
-       (assoc db :participants
-              (conj participants (participant value)))))))
+ (fn [world [_ value]]
+   {:db (let [db (:db world)
+              participants (db :participants)]
+          (if (= value "")
+            db
+            (assoc db :participants
+                   (conj participants
+                         (participant value)))))
+    :dispatch [:clear-input 1]}))
 
 (reg-event-db
  :delete-participant
