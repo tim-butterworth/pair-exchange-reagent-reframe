@@ -58,7 +58,7 @@
             (assoc db :participants
                    (conj participants
                          (participant value)))))
-    :dispatch [:clear-input 1]}))
+    :dispatch [:clear-input]}))
 
 (reg-event-db
  :delete-participant
