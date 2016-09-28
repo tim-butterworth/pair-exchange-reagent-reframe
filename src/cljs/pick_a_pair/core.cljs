@@ -15,6 +15,7 @@
 
 (defn participant [name]
   {:name name
+   :view-type :display
    :id (swap! participant-id inc)})
 
 (defn create-project [name ownerid]
@@ -23,15 +24,14 @@
    :name name})
 
 (def initial-state
-  {:participants (list (participant "participant1")
-                       (participant "participant2")
-                       (participant "participant3"))
+  {:participants (list
+                  {:name "name"
+                   :view-type :edit
+                   :id (swap! participant-id inc)})
    :projects (list (create-project "Reagent Man" 1))
    :input-value "enter some text friend"})
 
-
 ;; -- Event Handlers ----------------------------------------------------------
-
 
 (reg-event-db
  :initialize
@@ -67,6 +67,42 @@
           (filter
            (fn [participant]
              (not (= id (participant :id))))
+           (db :participants)))))
+
+(def reverse-type
+  {:display :edit
+   :edit :display})
+
+(defn maybe-update-participant [participant id update-fn]
+  (let [view-type (participant :view-type)]
+   (if (= id (participant :id))
+    (update-fn participant)
+    participant)))
+
+(reg-event-db
+ :toggle-participant-display
+ (fn [db [_ id]]
+   (assoc db :participants
+          (map
+           (fn [participant]
+             (maybe-update-participant
+              participant
+              id
+              (fn [participant]
+                (assoc participant :view-type (reverse-type (participant :view-type))))))
+           (db :participants)))))
+
+(reg-event-db
+ :update-participant-name
+ (fn [db [_ data]]
+   (assoc db :participants
+          (map
+           (fn [participant]
+             (maybe-update-participant
+              participant
+              (data :id)
+              (fn [participant]
+                (assoc participant :name (data :name)))))
            (db :participants)))))
 
 ;; -- Subscription Handlers ---------------------------------------------------
@@ -107,14 +143,35 @@
 (defn delete-participant [id]
   (dispatch [:delete-participant id]))
 
+(defn toggle-participant-display [id]
+  (dispatch [:toggle-participant-display id]))
+
+(defn update-participant-name [id new-name]
+  (dispatch [:update-participant-name {:id id :name new-name}]))
+
+(defn get-participant-view [participant]
+  (let [participant-view-type (:view-type participant)
+        name (:name participant)
+        id (:id participant)]
+    [:span 
+     (if (= participant-view-type :display)
+       [:span {:on-click
+               (fn []
+                 (toggle-participant-display id))}
+        name]
+       [:input {:type "text"
+                :value name
+                :on-change (fn [event]
+                             (update-participant-name id (-> event .-target .-value)))
+                :on-blur (fn []
+                           (toggle-participant-display id))}])]))
+
 (defn display-participant [participant]
   [:div {:className "participant"}
    [:div
+    (get-participant-view participant)
     [:span
-     (:name participant)]
-    [:span
-     {
-      :on-click (fn []
+     {:on-click (fn []
                   (delete-participant (participant :id)))
       :className "delete-participant"}
      "x"]]
