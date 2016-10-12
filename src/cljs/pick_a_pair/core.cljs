@@ -2,121 +2,13 @@
   (:require-macros [reagent.ratom :refer [reaction]])
   (:require [reagent.core :as reagent]
             [pick-a-pair.util :as util]
-            [re-frame.core :refer [reg-event-db
-                                   reg-event-fx
-                                   path
+            [pick-a-pair.event-handlers]
+            [pick-a-pair.subscriptions]
+            [re-frame.core :refer [path
                                    reg-sub
                                    dispatch
                                    dispatch-sync
                                    subscribe]]))
-
-(def participant-id (atom 0))
-(def project-id (atom 0))
-
-(defn participant [name]
-  {:name name
-   :view-type :display
-   :id (swap! participant-id inc)})
-
-(defn create-project [name ownerid]
-  {:ownerid ownerid
-   :id (swap! project-id inc)
-   :name name})
-
-(def initial-state
-  {:participants (list
-                  {:name "name"
-                   :view-type :edit
-                   :id (swap! participant-id inc)})
-   :projects (list (create-project "Reagent Man" 1))
-   :input-value "enter some text friend"})
-
-;; -- Event Handlers ----------------------------------------------------------
-
-(reg-event-db
- :initialize
- (fn [db _]
-   (merge db initial-state)))
-
-(reg-event-db
- :set-input-value
- (fn [db [_ value]]
-   (assoc db :input-value value)))
-
-(reg-event-db
- :clear-input
- (fn [db _]
-   (assoc db :input-value "")))
-
-(reg-event-fx
- :add-participant
- (fn [world [_ value]]
-   {:db (let [db (:db world)
-              participants (db :participants)]
-          (if (= value "")
-            db
-            (assoc db :participants
-                   (conj participants
-                         (participant value)))))
-    :dispatch [:clear-input]}))
-
-(reg-event-db
- :delete-participant
- (fn [db [_ id]]
-   (assoc db :participants
-          (filter
-           (fn [participant]
-             (not (= id (participant :id))))
-           (db :participants)))))
-
-(def reverse-type
-  {:display :edit
-   :edit :display})
-
-(defn maybe-update-participant [participant id update-fn]
-  (let [view-type (participant :view-type)]
-   (if (= id (participant :id))
-    (update-fn participant)
-    participant)))
-
-(reg-event-db
- :toggle-participant-display
- (fn [db [_ id]]
-   (assoc db :participants
-          (map
-           (fn [participant]
-             (maybe-update-participant
-              participant
-              id
-              (fn [participant]
-                (assoc participant :view-type (reverse-type (participant :view-type))))))
-           (db :participants)))))
-
-(reg-event-db
- :update-participant-name
- (fn [db [_ data]]
-   (assoc db :participants
-          (map
-           (fn [participant]
-             (maybe-update-participant
-              participant
-              (data :id)
-              (fn [participant]
-                (assoc participant :name (data :name)))))
-           (db :participants)))))
-
-;; -- Subscription Handlers ---------------------------------------------------
-
-(reg-sub :state
-         (fn [db _] db))
-
-(reg-sub :input-value
-         (fn [db _]
-           (:input-value db)))
-
-(reg-sub :participants
-         (fn [db _]
-           (:participants db)))
 
 ;; -- View Components ---------------------------------------------------------
 
@@ -175,9 +67,10 @@
                   (delete-participant (participant :id)))
       :className "delete-participant"}
      "x"]]
-   [:div
+   ;[:div
                                         ;[:ul (map (fn [project] [:li (project :name)]) @projects)]
-    ]])
+   ; ]
+   ])
 
 (defn display-participants [participants]
   [:div
