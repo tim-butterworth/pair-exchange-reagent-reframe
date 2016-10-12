@@ -53,6 +53,7 @@
         name]
        [:input {:type "text"
                 :value name
+                :auto-focus true
                 :on-change (fn [event]
                              (update-participant-name id (-> event .-target .-value)))
                 :on-blur (fn []
